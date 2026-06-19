@@ -217,5 +217,6 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 .claude/settings.local.json
-*.mp3
-*.mp4
+
+# All generated output — never commit media or cached pipeline data
+output/

@@ -1,43 +1,35 @@
 """
 Voice Agent — converts a video script into an MP3 audio file.
 
-Why no agentic loop here:
-    Unlike the Research Agent, the Voice Agent has no decisions to make.
-    It receives text and transforms it to audio — a straight conversion.
-    No Claude reasoning required. This is a valid and common agent pattern:
-    an agent that wraps an external service with a clean, consistent interface.
+No agentic loop needed here — straight conversion, no decisions required.
+Saves audio via PipelineState so the path is consistent and cacheable.
 """
 
-from datetime import datetime
 from src.tools.elevenlabs_tool import text_to_speech
+from src.pipeline.state import PipelineState
 
 
 class VoiceAgent:
     """
     Agent responsible for converting video scripts to audio.
 
-    Takes a script string, calls ElevenLabs, returns the path to the MP3 file.
-    Single responsibility: script in, audio file path out.
+    Reads from and writes to PipelineState so outputs are cached
+    and never regenerated unnecessarily.
     """
 
-    def run(self, script: str, filename: str | None = None) -> str:
+    def run(self, script: str, state: PipelineState) -> str:
         """
         Convert a video script to an MP3 audio file.
 
         Args:
-            script:   The full video script text to convert.
-            filename: Optional custom filename. Defaults to today's date.
+            script: The full video script text to convert.
+            state:  PipelineState for this topic — used to save the audio.
 
         Returns:
             Path to the saved MP3 file as a string.
         """
-        # Default filename is today's date — useful for daily uploads
-        # where each video corresponds to one day
-        if not filename:
-            filename = datetime.now().strftime("%Y-%m-%d")
-
-        print(f"  [Voice Agent] Converting script to audio ({len(script)} characters)...")
-        audio_path = text_to_speech(text=script, filename=filename)
-        print(f"  [Voice Agent] Audio saved to: {audio_path}")
-
-        return audio_path
+        print(f"  [Voice Agent] Converting {len(script)} characters to audio...")
+        audio_bytes = text_to_speech(text=script)
+        state.save_audio(audio_bytes)
+        print(f"  [Voice Agent] Audio saved to: {state.audio_path}")
+        return str(state.audio_path)

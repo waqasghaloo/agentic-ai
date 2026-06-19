@@ -44,9 +44,13 @@ src/
 │                         agents are decision-makers. Keeping them apart makes each
 │                         independently testable.
 │
-└── skills/             → Reusable capabilities shared across multiple agents.
-                          Why separate from tools: skills use Claude internally;
-                          tools call external APIs.
+├── skills/             → Reusable capabilities shared across multiple agents.
+│                         Why separate from tools: skills use Claude internally;
+│                         tools call external APIs.
+│
+└── pipeline/           → Pipeline-level concerns separate from agents and tools.
+    └── state.py        → Tracks completed steps per topic. Caches all outputs
+                          so nothing is regenerated unnecessarily (cost saving).
 ```
 
 ---

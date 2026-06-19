@@ -39,6 +39,16 @@ Every external tool or API used in this project — what it does, why it was cho
 
 ---
 
+## fal.ai + Flux Schnell
+- **What:** AI image generation API hosting the Flux family of models.
+- **Why chosen:** Single platform for both images (Flux) and video (Kling) under one API key. Flux Schnell is cheapest at ~$0.003/image with good quality.
+- **Upgrade path:** Set `FAL_IMAGE_MODEL=fal-ai/flux-pro/v1.1` in `.env` for best quality (~$0.05/image). No code changes needed.
+- **Used by:** `src/tools/image_tool.py` → called by Visual Agent.
+- **Cost:** ~$0.003/image (Schnell). 6 images per video = ~$0.02/video.
+- **Added:** Phase 5
+
+---
+
 *(More tools added here as each phase introduces them)*
 
 | Phase | Tool | Purpose |
