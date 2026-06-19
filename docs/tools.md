@@ -28,6 +28,17 @@ Every external tool or API used in this project — what it does, why it was cho
 
 ---
 
+## ElevenLabs
+- **What:** AI text-to-speech API with 1000+ voices and multiple accents.
+- **Why chosen:** Best voice quality and variety available. Industry standard for YouTube automation. Natural sounding, barely detectable as AI.
+- **Used by:** `src/tools/elevenlabs_tool.py` → called by Voice Agent.
+- **Voice used:** George (ID: JBFqnCBsd6RMkjVDRZzb) — clear, neutral accent, natural delivery.
+- **Model:** eleven_multilingual_v2 — best quality, supports multiple languages.
+- **Cost:** Free tier 10k chars/month. $5/month for 30k chars (~6 videos). $22/month for 100k chars (~20 videos).
+- **Added:** Phase 4
+
+---
+
 *(More tools added here as each phase introduces them)*
 
 | Phase | Tool | Purpose |

@@ -26,3 +26,8 @@ def _require(key: str) -> str:
 # Claude
 ANTHROPIC_API_KEY: str = _require("ANTHROPIC_API_KEY")
 CLAUDE_MODEL: str = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-6")
+
+# ElevenLabs
+ELEVENLABS_API_KEY: str = _require("ELEVENLABS_API_KEY")
+ELEVENLABS_VOICE_ID: str = os.getenv("ELEVENLABS_VOICE_ID", "JBFqnCBsd6RMkjVDRZzb")  # George — clear, natural, neutral accent
+ELEVENLABS_MODEL: str = os.getenv("ELEVENLABS_MODEL", "eleven_multilingual_v2")
