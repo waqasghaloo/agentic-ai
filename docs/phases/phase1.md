@@ -47,7 +47,7 @@ them separate. CI/CD can install production deps only with `poetry install --onl
 - **`python-dotenv`** loads a `.env` file so secrets never appear in code
 - **Separation of concerns** starts at the folder level — agents, tools, skills are distinct
 
-## What This Unlocks for Phase 2
-With the structure in place, Phase 2 can focus entirely on building the first agent
-(Script Agent) without any setup overhead. The config, structure, and standards are
+## What This Unlocked for Phase 2
+With the structure in place, Phase 2 focused entirely on building the first agent
+(Script Agent) without any setup overhead. The config, structure, and standards were
 already established.
