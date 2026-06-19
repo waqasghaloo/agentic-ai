@@ -19,6 +19,15 @@ Every external tool or API used in this project — what it does, why it was cho
 
 ---
 
+## ddgs (DuckDuckGo Search)
+- **What:** Python library for searching the web via DuckDuckGo.
+- **Why chosen:** Free, no API key required, sufficient for finding trending topics.
+  Can be swapped for a paid provider (Serper, Tavily) later without changing agents.
+- **Used by:** `src/tools/search_tool.py` → called by Research Agent via tool use.
+- **Added:** Phase 3
+
+---
+
 *(More tools added here as each phase introduces them)*
 
 | Phase | Tool | Purpose |
