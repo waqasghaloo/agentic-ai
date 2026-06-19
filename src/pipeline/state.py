@@ -137,3 +137,12 @@ class PipelineState:
 
     def get_image_paths(self) -> list[str]:
         return sorted(str(p) for p in self.images_dir.glob("*.png"))
+
+    # ── Video ─────────────────────────────────────────────────────────────────
+
+    @property
+    def video_path(self) -> Path:
+        return self.dir / "final.mp4"
+
+    def has_video(self) -> bool:
+        return self.video_path.exists()
