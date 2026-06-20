@@ -117,9 +117,14 @@ def _make_video_clip(clip_path: str, duration: float) -> VideoFileClip:
         clip = clip.subclip(0, duration)
     # else: use the whole clip even if shorter; concatenation handles gaps
 
-    # Resize to exactly 1920×1080 to match AI image clips
+    # Resize using Pillow LANCZOS directly — MoviePy's .resize() uses the
+    # deprecated PIL.Image.ANTIALIAS which was removed in Pillow 10+
     if clip.size != (VIDEO_WIDTH, VIDEO_HEIGHT):
-        clip = clip.resize((VIDEO_WIDTH, VIDEO_HEIGHT))
+        clip = clip.fl_image(
+            lambda img: np.array(
+                PILImage.fromarray(img).resize((VIDEO_WIDTH, VIDEO_HEIGHT), PILImage.LANCZOS)
+            )
+        )
 
     return clip.set_fps(VIDEO_FPS)
 
