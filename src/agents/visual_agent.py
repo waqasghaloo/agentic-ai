@@ -83,7 +83,7 @@ class VisualAgent:
         numbered = "\n\n".join(f"[{i}] {p}" for i, p in enumerate(paragraphs))
         response = self.client.messages.create(
             model=self.model,
-            max_tokens=4096,
+            max_tokens=8192,
             system=_IMAGE_SYSTEM_PROMPT,
             messages=[
                 {
@@ -93,7 +93,14 @@ class VisualAgent:
             ],
         )
 
-        data = json.loads(response.content[0].text.strip())
+        raw = response.content[0].text.strip()
+        # Strip markdown code fences if Claude wrapped the JSON
+        if raw.startswith("```"):
+            raw = raw.split("```", 2)[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+            raw = raw.rsplit("```", 1)[0].strip()
+        data = json.loads(raw)
         image_prompts = data["image_prompts"]
         pexels_queries = data.get("pexels_queries", [])
 
