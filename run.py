@@ -47,13 +47,12 @@ def run_pipeline(niche: str) -> None:
         VoiceAgent().run(script, state)
     print()
 
-    # Step 4: Images — skip if cached
-    if state.has_images():
-        print("[4/5] Images already exist — skipping fal.ai calls.")
-        image_paths = state.get_image_paths()
+    # Step 4: Images + stock clips — skip if cached
+    if state.has_media():
+        print("[4/5] Media already exists — skipping image generation.")
     else:
-        print("[4/5] Visual Agent generating images...")
-        image_paths = VisualAgent().run(script, state)
+        print("[4/5] Visual Agent generating images and sourcing clips...")
+        VisualAgent().run(script, state)
     print()
 
     # Step 5: Video — skip if cached
@@ -66,12 +65,17 @@ def run_pipeline(niche: str) -> None:
     print()
 
     # Summary
+    media_list = state.get_media_list()
+    img_count = sum(1 for m in media_list if m["type"] == "image")
+    vid_count = sum(1 for m in media_list if m["type"] == "video")
+
     print("=" * 60)
     print("Pipeline complete.")
+    print(f"Folder:  {state.dir}")
     print(f"Topic:   {topic}")
     print(f"Script:  {state.script_path}")
     print(f"Audio:   {state.audio_path}")
-    print(f"Images:  {len(state.get_image_paths())} files")
+    print(f"Media:   {img_count} images + {vid_count} stock clips")
     print(f"Video:   {video_path}")
     print("=" * 60)
 

@@ -10,19 +10,24 @@ Why this exists:
     for a given topic. Each step checks state before spending money.
 
 How it works:
-    Each topic gets its own folder under output/topics/{slug}/.
-    A metadata.json file tracks which steps are done and where files are saved.
+    Each topic gets its own numbered folder under output/topics/{NNN}-{slug}/.
+    A metadata.json file tracks which steps are done and the ordered media list.
     Agents read paths from state and write paths back to state.
 
 Output structure per topic:
-    output/topics/{slug}/
-        metadata.json   ← progress tracker
+    output/topics/001-topic-slug/
+        metadata.json   ← progress tracker + media order
         script.txt      ← generated script (cached)
         audio.mp3       ← generated voiceover (cached)
         images/
-            01-hook.png
-            02-point-one.png
+            01-para.png
+            02-para.png
             ...
+        clips/
+            01-clip.mp4
+            02-clip.mp4
+            ...
+        final.mp4
 """
 
 import json
@@ -46,9 +51,50 @@ def _slugify(text: str, max_len: int = 60) -> str:
     return text[:max_len].rstrip("-")
 
 
+def _next_number() -> int:
+    """Scan existing folders and return the next run number (e.g. 3 if 001 and 002 exist)."""
+    if not OUTPUT_DIR.exists():
+        return 1
+    numbers = []
+    for d in OUTPUT_DIR.iterdir():
+        if d.is_dir():
+            m = re.match(r"^(\d+)-", d.name)
+            if m:
+                numbers.append(int(m.group(1)))
+    return (max(numbers) + 1) if numbers else 1
+
+
+def _find_existing_by_slug(slug: str) -> Path | None:
+    """
+    Search all existing topic folders for a matching slug stored in metadata.json.
+
+    Returns the folder Path if found, None otherwise. This is how we detect
+    that a topic has already been started and resume from its cached state
+    rather than creating a new numbered folder.
+    """
+    if not OUTPUT_DIR.exists():
+        return None
+    for d in OUTPUT_DIR.iterdir():
+        if not d.is_dir():
+            continue
+        meta_path = d / "metadata.json"
+        if not meta_path.exists():
+            continue
+        try:
+            data = json.loads(meta_path.read_text())
+            if data.get("slug") == slug:
+                return d
+        except (json.JSONDecodeError, OSError):
+            continue
+    return None
+
+
 class PipelineState:
     """
     Manages cached state for one topic's video pipeline.
+
+    Folder naming: output/topics/001-topic-slug/, 002-next-topic/, etc.
+    New topics get the next available number. Same topic reuses its folder.
 
     Usage:
         state = PipelineState(topic)
@@ -63,9 +109,15 @@ class PipelineState:
     def __init__(self, topic: str) -> None:
         self.topic = topic
         self.slug = _slugify(topic)
-        self.dir = OUTPUT_DIR / self.slug
-        self.dir.mkdir(parents=True, exist_ok=True)
 
+        existing = _find_existing_by_slug(self.slug)
+        if existing:
+            self.dir = existing
+        else:
+            num = _next_number()
+            self.dir = OUTPUT_DIR / f"{num:03d}-{self.slug}"
+
+        self.dir.mkdir(parents=True, exist_ok=True)
         self.metadata_path = self.dir / "metadata.json"
         self._meta = self._load()
 
@@ -82,6 +134,14 @@ class PipelineState:
     @property
     def images_dir(self) -> Path:
         return self.dir / "images"
+
+    @property
+    def clips_dir(self) -> Path:
+        return self.dir / "clips"
+
+    @property
+    def video_path(self) -> Path:
+        return self.dir / "final.mp4"
 
     # ── Metadata ─────────────────────────────────────────────────────────────
 
@@ -138,11 +198,27 @@ class PipelineState:
     def get_image_paths(self) -> list[str]:
         return sorted(str(p) for p in self.images_dir.glob("*.png"))
 
-    # ── Video ─────────────────────────────────────────────────────────────────
+    # ── Media list (images + video clips interleaved) ─────────────────────────
 
-    @property
-    def video_path(self) -> Path:
-        return self.dir / "final.mp4"
+    def has_media(self) -> bool:
+        """True if the VisualAgent has finished and saved the full media list."""
+        return bool(self._meta.get("media_list"))
+
+    def get_media_list(self) -> list[dict]:
+        """
+        Return the ordered media sequence for the editor.
+
+        Each item is {"type": "image"|"video", "path": "..."}.
+        Images get Ken Burns / pan effects; video clips are trimmed to fit duration.
+        """
+        return self._meta.get("media_list", [])
+
+    def save_media_list(self, media_list: list[dict]) -> None:
+        """Save the interleaved media sequence after VisualAgent completes."""
+        self._meta["media_list"] = media_list
+        self._mark_done("media")
+
+    # ── Video ─────────────────────────────────────────────────────────────────
 
     def has_video(self) -> bool:
         return self.video_path.exists()

@@ -38,3 +38,8 @@ FAL_KEY: str = _require("FAL_KEY")
 # Flux Schnell: fastest and cheapest (~$0.003/image), good quality
 # Upgrade to "fal-ai/flux-pro/v1.1" for best quality (~$0.05/image)
 FAL_IMAGE_MODEL: str = os.getenv("FAL_IMAGE_MODEL", "fal-ai/flux/schnell")
+
+# Pexels — free stock video clips (optional)
+# Sign up at https://www.pexels.com/api/ — free, no credit card needed
+# If not set, the pipeline skips stock footage and uses AI images only
+PEXELS_API_KEY: str | None = os.getenv("PEXELS_API_KEY") or None
