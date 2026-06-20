@@ -40,9 +40,10 @@ FAL_KEY: str = _require("FAL_KEY")
 # Downgrade to "fal-ai/flux/schnell" for budget runs (~$0.003/image)
 FAL_IMAGE_MODEL: str = os.getenv("FAL_IMAGE_MODEL", "fal-ai/flux-pro/v1.1")
 
-# Video model — WAN 2.1 generates short AI clips (~$0.03-0.05 per 5s clip)
-# Alternative: "fal-ai/kling-video/v2.0/standard/text-to-video" (higher quality, ~$0.14/clip)
-FAL_VIDEO_MODEL: str = os.getenv("FAL_VIDEO_MODEL", "fal-ai/wan/v2.1/t2v")
+# Video model — Kling v3 Standard image-to-video (~$0.42 per 5s clip)
+# Animates a Flux Pro start frame → higher quality than pure text-to-video
+# Upgrade: "fal-ai/kling-video/v3/pro/image-to-video" (~$0.63 per 5s, more cinematic)
+FAL_VIDEO_MODEL: str = os.getenv("FAL_VIDEO_MODEL", "fal-ai/kling-video/v3/standard/image-to-video")
 
 # Pexels — free stock video clips (optional, kept as fallback)
 # Sign up at https://www.pexels.com/api/ — free, no credit card needed

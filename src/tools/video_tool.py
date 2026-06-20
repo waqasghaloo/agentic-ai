@@ -1,21 +1,26 @@
 """
-Video Tool — generates a short AI video clip from a text prompt via fal.ai.
+Video Tool — animates a Flux Pro image into a short AI video clip using Kling image-to-video.
 
-Why AI video clips:
-    Still images with Ken Burns effects are engaging but AI video clips add
-    real motion — camera moves, physics, flowing water, space, fire — that
-    makes the video feel alive. Mixing ~30% AI clips with 70% Flux Pro images
-    balances quality and cost (~$0.03-0.05 per 5s clip with WAN 2.1).
+Why image-to-video instead of text-to-video:
+    Text-to-video (e.g. Seedance) generates from scratch at ~$1.21/5s clip.
+    Image-to-video (Kling) starts from a Flux Pro frame and adds motion at ~$0.42/5s.
+    The result is higher quality AND 3× cheaper because the start frame is already
+    a professional Flux Pro image.
 
-Model choice:
-    Default: WAN 2.1 (fal-ai/wan/v2.1/t2v) — good quality, cost effective
-    Premium: Kling 2.0 (fal-ai/kling-video/v2.0/standard/text-to-video) — cinematic
-    Set FAL_VIDEO_MODEL in .env to switch.
+Flow per "video" paragraph:
+    1. VisualAgent generates a Flux Pro image (the start frame)
+    2. This tool uploads that image to fal.ai's CDN to get a URL
+    3. Kling v3 Standard animates it using a short motion description
+    4. The resulting MP4 is saved to the clips/ folder
 
-Prompt tips for video:
-    - Describe motion explicitly: "camera slowly panning", "particles floating"
-    - Keep scenes simple — complex multi-subject prompts confuse video models
-    - 5 seconds is ideal: enough for one strong visual moment
+Model choice (set FAL_VIDEO_MODEL in .env):
+    Default: fal-ai/kling-video/v3/standard/image-to-video  (~$0.42/5s)
+    Premium: fal-ai/kling-video/v3/pro/image-to-video        (~$0.63/5s, more cinematic)
+
+Motion prompt tips:
+    - Short and specific: "camera slowly orbits", "particles drift upward"
+    - One clear motion per clip — video models struggle with complex multi-action prompts
+    - 5 seconds is the sweet spot: full motion arc, not too expensive
 """
 
 import requests
@@ -24,30 +29,34 @@ import fal_client
 from src.config import FAL_VIDEO_MODEL
 
 
-def generate_clip(prompt: str, output_path: Path, duration: int = 5) -> bool:
+def animate_image(image_path: Path, motion_prompt: str, output_path: Path, duration: int = 5) -> bool:
     """
-    Generate a short video clip from a text prompt and save to disk.
+    Animate a still image into a short video clip using Kling image-to-video.
 
     Args:
-        prompt:      Motion scene description (e.g. "DNA helix slowly rotating in blue light")
-        output_path: Where to save the downloaded MP4 file.
-        duration:    Clip length in seconds (5 or 10). Default 5.
+        image_path:    Path to the local Flux Pro start frame image.
+        motion_prompt: Short description of what should move (e.g. "camera slowly zooms in")
+        output_path:   Where to save the downloaded MP4 file.
+        duration:      Clip length in seconds (5 or 10). Default 5.
 
     Returns:
         True if the clip was generated and saved, False on any failure.
     """
     try:
+        # Upload the local image to fal.ai CDN — Kling needs a URL, not a local path
+        image_url = fal_client.upload_file(str(image_path))
+
         result = fal_client.run(
             FAL_VIDEO_MODEL,
             arguments={
-                "prompt": prompt,
+                "start_image_url": image_url,
+                "prompt": motion_prompt,
                 "duration": str(duration),
-                "resolution": "720p",
                 "aspect_ratio": "16:9",
+                "generate_audio": False,
             },
         )
 
-        # fal.ai video models return {"video": {"url": "..."}}
         video_url = result["video"]["url"]
 
         output_path.parent.mkdir(parents=True, exist_ok=True)
