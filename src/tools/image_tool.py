@@ -3,8 +3,8 @@ Image Tool — generates an image using Flux via fal.ai and saves to a given pat
 
 Why fal.ai + Flux:
     fal.ai hosts the best open image models under one API.
-    Flux Schnell: ~$0.003/image — fast and cheap for daily automation.
-    Upgrade path: set FAL_IMAGE_MODEL=fal-ai/flux-pro/v1.1 in .env.
+    Default: Flux Pro v1.1 (~$0.05/image) — cinematic, photorealistic quality.
+    Budget mode: set FAL_IMAGE_MODEL=fal-ai/flux/schnell in .env (~$0.003/image).
 """
 
 import requests
@@ -21,13 +21,11 @@ def generate_image(prompt: str, output_path: Path) -> None:
         prompt:      Detailed description of the image to generate.
         output_path: Full path where the image should be saved.
     """
-    # Call fal.ai — reads FAL_KEY from os.environ automatically
     result = fal_client.run(
         FAL_IMAGE_MODEL,
         arguments={
             "prompt": prompt,
             "image_size": "landscape_16_9",  # 16:9 — perfect for YouTube
-            "num_inference_steps": 4,
             "num_images": 1,
             "enable_safety_checker": True,
         },
@@ -35,7 +33,6 @@ def generate_image(prompt: str, output_path: Path) -> None:
 
     image_url = result["images"][0]["url"]
 
-    # Download image from the returned URL
     output_path.parent.mkdir(parents=True, exist_ok=True)
     response = requests.get(image_url, timeout=30)
     response.raise_for_status()

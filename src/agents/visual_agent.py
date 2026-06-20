@@ -1,67 +1,80 @@
 """
-Visual Agent — generates images and sources stock clips for each paragraph of a script.
+Visual Agent — builds a mixed media sequence of AI images and AI video clips per script.
 
 How it works:
     1. Split the script into paragraphs (~20-25 chunks)
-    2. Ask Claude for an image prompt per paragraph + 4 Pexels search queries
-    3. Generate one AI image per paragraph via fal.ai (paragraph-level alignment
-       means the visual matches exactly what is being said at that moment)
-    4. If PEXELS_API_KEY is set: download 4 free stock clips from Pexels
-    5. Interleave: every 5th item in the sequence is replaced by a stock clip
-    6. Save the ordered media list to PipelineState for the editor to consume
+    2. One Claude call: for each paragraph, decide "image" or "video" + write the prompt
+       - ~70% get a Flux Pro image (concepts, data, faces, objects)
+       - ~30% get a WAN 2.1 video clip (motion scenes: space, water, fire, nature)
+    3. Generate all media in order: images via image_tool, clips via video_tool
+    4. Save the ordered media list to PipelineState for the editor
+
+Why per-paragraph media type decisions:
+    Claude knows which paragraphs describe action/motion (better as video)
+    versus concepts/facts (better as a crisp still image). This produces
+    a much better visual fit than mechanical every-Nth rotation.
 """
 
 import json
 import anthropic
-from src.config import ANTHROPIC_API_KEY, CLAUDE_MODEL, PEXELS_API_KEY
+from src.config import ANTHROPIC_API_KEY, CLAUDE_MODEL
 from src.tools.image_tool import generate_image
-from src.tools.pexels_tool import search_and_download_clip
+from src.tools.video_tool import generate_clip
 from src.pipeline.state import PipelineState
 
 
-_IMAGE_SYSTEM_PROMPT = """
-You are a visual director for YouTube educational videos.
+_VISUAL_SYSTEM_PROMPT = """
+You are a visual director for a YouTube educational channel.
 
 You will receive a script split into numbered paragraphs.
-For each paragraph, write one image generation prompt that:
-- Depicts a specific, concrete visual scene matching what is being said
-- Uses style: "photorealistic, cinematic lighting, 16:9 format, high detail"
-- Contains NO text, logos, watermarks, or human faces
+For each paragraph, decide whether it should be visualised as:
 
-Also provide 4 short Pexels video search queries for stock footage variety.
-Choose search terms that would find visually rich, topic-relevant clips
-(e.g. "space telescope orbit", "underwater coral reef", "city time lapse").
+  "image" — a Flux Pro AI still image (best for: concepts, data, close-ups, portraits, diagrams)
+  "video" — a WAN AI video clip (best for: motion, action, nature, space, flowing, cinematic)
+
+Rules:
+- Aim for roughly 65-70% images and 30-35% video clips
+- For "image" prompts: be specific and cinematic. Style: "photorealistic, dramatic cinematic lighting, ultra detail, 16:9"
+- For "video" prompts: describe motion clearly. Examples: "camera slowly orbiting a glowing DNA helix", "time-lapse of neurons firing in electric blue light"
+- Both types: NO text, logos, watermarks, or human faces
+- Both types: visually match what is being said in that paragraph
 
 Return ONLY valid JSON. No explanation. No markdown. Format:
 {
-  "image_prompts": [
-    {"index": 0, "prompt": "..."},
-    {"index": 1, "prompt": "..."}
-  ],
-  "pexels_queries": ["query one", "query two", "query three", "query four"]
+  "media": [
+    {"index": 0, "type": "image", "prompt": "..."},
+    {"index": 1, "type": "video", "prompt": "..."},
+    {"index": 2, "type": "image", "prompt": "..."}
+  ]
 }
 """
 
-# Minimum paragraph length to generate an image for — skips section headers, short lines
 _MIN_PARA_LEN = 80
-
-# Insert a stock clip after every Nth image
-_CLIP_EVERY_N = 5
 
 
 def _split_paragraphs(script: str) -> list[str]:
-    """Split script into non-trivial paragraphs suitable for image generation."""
+    """Split script into non-trivial paragraphs. Skips short headers and blank lines."""
     paragraphs = [p.strip() for p in script.split("\n\n")]
     return [p for p in paragraphs if len(p) >= _MIN_PARA_LEN]
 
 
+def _parse_json(raw: str) -> dict:
+    """Parse JSON from Claude response, stripping markdown code fences if present."""
+    raw = raw.strip()
+    if raw.startswith("```"):
+        raw = raw.split("```", 2)[1]
+        if raw.startswith("json"):
+            raw = raw[4:]
+        raw = raw.rsplit("```", 1)[0].strip()
+    return json.loads(raw)
+
+
 class VisualAgent:
     """
-    Agent that builds the full visual media list for one video.
+    Agent that builds the ordered visual media list for one video.
 
-    Generates one AI image per script paragraph for tight voiceover alignment,
-    then mixes in free Pexels stock clips every few images for motion variety.
-    The final ordered media list is saved to PipelineState for the editor.
+    Makes per-paragraph image vs. video decisions, generates all media,
+    and saves the result to PipelineState for the EditorAgent to assemble.
     """
 
     def __init__(self) -> None:
@@ -77,80 +90,59 @@ class VisualAgent:
             state:  PipelineState for this topic — media list saved here.
         """
         paragraphs = _split_paragraphs(script)
-        print(f"  [Visual Agent] {len(paragraphs)} paragraphs → requesting prompts from Claude...")
+        print(f"  [Visual Agent] {len(paragraphs)} paragraphs → asking Claude for media plan...")
 
-        # Step 1: Ask Claude for image prompts + Pexels search terms
         numbered = "\n\n".join(f"[{i}] {p}" for i, p in enumerate(paragraphs))
         response = self.client.messages.create(
             model=self.model,
             max_tokens=8192,
-            system=_IMAGE_SYSTEM_PROMPT,
-            messages=[
-                {
-                    "role": "user",
-                    "content": f"Script paragraphs:\n\n{numbered}",
-                }
-            ],
+            system=_VISUAL_SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": f"Script paragraphs:\n\n{numbered}"}],
         )
 
-        raw = response.content[0].text.strip()
-        # Strip markdown code fences if Claude wrapped the JSON
-        if raw.startswith("```"):
-            raw = raw.split("```", 2)[1]
-            if raw.startswith("json"):
-                raw = raw[4:]
-            raw = raw.rsplit("```", 1)[0].strip()
-        data = json.loads(raw)
-        image_prompts = data["image_prompts"]
-        pexels_queries = data.get("pexels_queries", [])
+        data = _parse_json(response.content[0].text)
+        media_plan = data["media"]
 
-        print(f"  [Visual Agent] {len(image_prompts)} image prompts ready. Generating...")
+        img_planned = sum(1 for m in media_plan if m["type"] == "image")
+        vid_planned = sum(1 for m in media_plan if m["type"] == "video")
+        print(f"  [Visual Agent] Plan: {img_planned} images + {vid_planned} video clips. Generating...")
 
-        # Step 2: Generate AI images (one per paragraph)
         state.images_dir.mkdir(parents=True, exist_ok=True)
-        image_paths = []
+        state.clips_dir.mkdir(parents=True, exist_ok=True)
 
-        for item in image_prompts:
-            idx = item["index"]
-            prompt = item["prompt"]
-            output_path = state.images_dir / f"{idx + 1:02d}-para.png"
-
-            print(f"  [Visual Agent] Image {idx + 1}/{len(image_prompts)}...")
-            generate_image(prompt=prompt, output_path=output_path)
-            image_paths.append(str(output_path))
-
-        # Step 3: Download Pexels stock clips (only if API key is configured)
-        clip_paths = []
-        if PEXELS_API_KEY and pexels_queries:
-            print(f"  [Visual Agent] Downloading {len(pexels_queries)} Pexels clips...")
-            state.clips_dir.mkdir(parents=True, exist_ok=True)
-
-            for i, query in enumerate(pexels_queries[:4]):
-                clip_path = state.clips_dir / f"{i + 1:02d}-clip.mp4"
-                success = search_and_download_clip(query, clip_path)
-                if success:
-                    clip_paths.append(str(clip_path))
-                    print(f"  [Visual Agent] Clip {i + 1}: '{query}' ✓")
-                else:
-                    print(f"  [Visual Agent] Clip {i + 1}: '{query}' — not found, skipping")
-        else:
-            if not PEXELS_API_KEY:
-                print("  [Visual Agent] PEXELS_API_KEY not set — using AI images only")
-
-        # Step 4: Interleave — insert a stock clip after every Nth image
         media_list = []
-        clip_index = 0
+        img_counter = 0
+        vid_counter = 0
 
-        for i, img_path in enumerate(image_paths):
-            media_list.append({"type": "image", "path": img_path})
+        for item in media_plan:
+            idx = item["index"]
+            media_type = item["type"]
+            prompt = item["prompt"]
 
-            if (i + 1) % _CLIP_EVERY_N == 0 and clip_index < len(clip_paths):
-                media_list.append({"type": "video", "path": clip_paths[clip_index]})
-                clip_index += 1
+            if media_type == "video":
+                vid_counter += 1
+                output_path = state.clips_dir / f"{idx + 1:02d}-clip.mp4"
+                print(f"  [Visual Agent] Clip {vid_counter}/{vid_planned} (para {idx + 1})...")
+                success = generate_clip(prompt=prompt, output_path=output_path)
+                if success:
+                    media_list.append({"type": "video", "path": str(output_path)})
+                else:
+                    # Fallback: generate an image instead if the clip fails
+                    print(f"  [Visual Agent] Clip failed — falling back to image for para {idx + 1}")
+                    img_counter += 1
+                    img_path = state.images_dir / f"{idx + 1:02d}-para.png"
+                    generate_image(prompt=prompt, output_path=img_path)
+                    media_list.append({"type": "image", "path": str(img_path)})
+            else:
+                img_counter += 1
+                output_path = state.images_dir / f"{idx + 1:02d}-para.png"
+                print(f"  [Visual Agent] Image {img_counter}/{img_planned} (para {idx + 1})...")
+                generate_image(prompt=prompt, output_path=output_path)
+                media_list.append({"type": "image", "path": str(output_path)})
 
         state.save_media_list(media_list)
 
         total = len(media_list)
-        img_count = sum(1 for m in media_list if m["type"] == "image")
-        vid_count = sum(1 for m in media_list if m["type"] == "video")
-        print(f"  [Visual Agent] Media ready: {total} items ({img_count} images, {vid_count} clips)")
+        final_imgs = sum(1 for m in media_list if m["type"] == "image")
+        final_vids = sum(1 for m in media_list if m["type"] == "video")
+        print(f"  [Visual Agent] Done: {total} items ({final_imgs} images + {final_vids} AI clips)")
