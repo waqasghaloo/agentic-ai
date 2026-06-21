@@ -64,6 +64,37 @@ def _next_number() -> int:
     return (max(numbers) + 1) if numbers else 1
 
 
+def find_incomplete_state() -> "PipelineState | None":
+    """
+    Scan all topic folders and return the first one that has audio but no final video.
+
+    This lets the pipeline finish existing work before starting new topics,
+    which avoids spending money on research/script/audio for a new topic when
+    a half-finished one is already sitting there waiting.
+
+    Returns None if all existing topics are complete (or none exist yet).
+    """
+    if not OUTPUT_DIR.exists():
+        return None
+    for d in sorted(OUTPUT_DIR.iterdir()):  # sorted = lowest number first
+        if not d.is_dir():
+            continue
+        meta_path = d / "metadata.json"
+        if not meta_path.exists():
+            continue
+        audio_exists = (d / "audio.mp3").exists()
+        video_exists = (d / "final.mp4").exists()
+        if audio_exists and not video_exists:
+            try:
+                data = json.loads(meta_path.read_text())
+                topic = data.get("topic", "")
+                if topic:
+                    return PipelineState(topic)
+            except (json.JSONDecodeError, OSError):
+                continue
+    return None
+
+
 def _find_existing_by_slug(slug: str) -> Path | None:
     """
     Search all existing topic folders for a matching slug stored in metadata.json.
@@ -197,6 +228,21 @@ class PipelineState:
 
     def get_image_paths(self) -> list[str]:
         return sorted(str(p) for p in self.images_dir.glob("*.png"))
+
+    # ── Media plan (Claude's per-paragraph image/video decisions) ────────────────
+
+    def has_media_plan(self) -> bool:
+        """True if Claude has already produced the media plan for this topic."""
+        return bool(self._meta.get("media_plan"))
+
+    def get_media_plan(self) -> list[dict]:
+        """Return Claude's per-paragraph media decisions (type + prompts)."""
+        return self._meta.get("media_plan", [])
+
+    def save_media_plan(self, plan: list[dict]) -> None:
+        """Persist Claude's media plan immediately after it's received."""
+        self._meta["media_plan"] = plan
+        self._save()
 
     # ── Media list (images + video clips interleaved) ─────────────────────────
 

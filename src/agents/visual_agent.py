@@ -113,18 +113,23 @@ class VisualAgent:
             state:  PipelineState for this topic — media list saved here.
         """
         paragraphs = _split_paragraphs(script)
-        print(f"  [Visual Agent] {len(paragraphs)} paragraphs → asking Claude for media plan...")
 
-        numbered = "\n\n".join(f"[{i}] {p}" for i, p in enumerate(paragraphs))
-        response = self.client.messages.create(
-            model=self.model,
-            max_tokens=8192,
-            system=_VISUAL_SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": f"Script paragraphs:\n\n{numbered}"}],
-        )
-
-        data = _parse_json(response.content[0].text)
-        media_plan = data["media"]
+        # Reuse Claude's media plan if already saved — saves API cost on resume
+        if state.has_media_plan():
+            media_plan = state.get_media_plan()
+            print(f"  [Visual Agent] Resuming from saved media plan ({len(media_plan)} items)...")
+        else:
+            print(f"  [Visual Agent] {len(paragraphs)} paragraphs → asking Claude for media plan...")
+            numbered = "\n\n".join(f"[{i}] {p}" for i, p in enumerate(paragraphs))
+            response = self.client.messages.create(
+                model=self.model,
+                max_tokens=8192,
+                system=_VISUAL_SYSTEM_PROMPT,
+                messages=[{"role": "user", "content": f"Script paragraphs:\n\n{numbered}"}],
+            )
+            data = _parse_json(response.content[0].text)
+            media_plan = data["media"]
+            state.save_media_plan(media_plan)  # persist immediately before generating anything
 
         img_planned = sum(1 for m in media_plan if m["type"] == "image")
         vid_planned = sum(1 for m in media_plan if m["type"] == "video")
@@ -151,27 +156,34 @@ class VisualAgent:
             image_prompt = item["image_prompt"]
             img_path = state.images_dir / f"{idx + 1:02d}-para.png"
 
-            # Always generate the Flux Pro base image first
+            # Generate base image — skip if it already exists on disk (resume safety)
             img_counter += 1
             label = "image" if media_type == "image" else f"base frame for clip {vid_counter + 1}"
-            print(f"  [Visual Agent] Image {img_counter}/{img_planned + vid_planned} ({label}, para {idx + 1})...")
-            generate_image(prompt=image_prompt, output_path=img_path)
+            if img_path.exists():
+                print(f"  [Visual Agent] Image {img_counter} already exists — skipping (para {idx + 1})")
+            else:
+                print(f"  [Visual Agent] Image {img_counter}/{img_planned + vid_planned} ({label}, para {idx + 1})...")
+                generate_image(prompt=image_prompt, output_path=img_path)
 
             if media_type == "video":
                 vid_counter += 1
                 motion_prompt = item.get("motion_prompt", "camera slowly zooms in")
                 clip_path = state.clips_dir / f"{idx + 1:02d}-clip.mp4"
-                print(f"  [Visual Agent] Animating clip {vid_counter}/{vid_planned}...")
-                success = animate_image(
-                    image_path=img_path,
-                    motion_prompt=motion_prompt,
-                    output_path=clip_path,
-                )
-                if success:
+                if clip_path.exists():
+                    print(f"  [Visual Agent] Clip {vid_counter} already exists — skipping (para {idx + 1})")
                     media_list.append({"type": "video", "path": str(clip_path)})
                 else:
-                    print(f"  [Visual Agent] Clip failed — using base image for para {idx + 1}")
-                    media_list.append({"type": "image", "path": str(img_path)})
+                    print(f"  [Visual Agent] Animating clip {vid_counter}/{vid_planned}...")
+                    success = animate_image(
+                        image_path=img_path,
+                        motion_prompt=motion_prompt,
+                        output_path=clip_path,
+                    )
+                    if success:
+                        media_list.append({"type": "video", "path": str(clip_path)})
+                    else:
+                        print(f"  [Visual Agent] Clip failed — using base image for para {idx + 1}")
+                        media_list.append({"type": "image", "path": str(img_path)})
             else:
                 media_list.append({"type": "image", "path": str(img_path)})
 
