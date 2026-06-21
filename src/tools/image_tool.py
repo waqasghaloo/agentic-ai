@@ -25,6 +25,14 @@ def generate_image(prompt: str, output_path: Path) -> None:
         FAL_IMAGE_MODEL,
         arguments={
             "prompt": prompt,
+            # Negative prompt prevents the most common Flux failures:
+            # text/logos cause platform copyright strikes, anatomy issues look unprofessional
+            "negative_prompt": (
+                "text, letters, words, numbers, watermark, logo, brand name, "
+                "NASA logo, ESA logo, company name, label, caption, subtitle, "
+                "unrealistic anatomy, distorted hands, extra fingers, deformed face, "
+                "blurry, low quality, oversaturated, cartoon, illustration, painting"
+            ),
             "image_size": "landscape_16_9",  # 16:9 — perfect for YouTube
             "num_images": 1,
             "enable_safety_checker": True,
