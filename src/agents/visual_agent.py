@@ -19,7 +19,7 @@ Cost per video (~21 paragraphs, 30% video):
 
 import json
 import anthropic
-from src.config import ANTHROPIC_API_KEY, CLAUDE_MODEL
+from src.config import ANTHROPIC_API_KEY, CLAUDE_MODEL, FAL_VIDEO_DISABLED
 from src.tools.image_tool import generate_image
 from src.tools.video_tool import animate_image
 from src.pipeline.state import PipelineState
@@ -128,6 +128,14 @@ class VisualAgent:
 
         img_planned = sum(1 for m in media_plan if m["type"] == "image")
         vid_planned = sum(1 for m in media_plan if m["type"] == "video")
+
+        if FAL_VIDEO_DISABLED and vid_planned > 0:
+            print(f"  [Visual Agent] FAL_VIDEO_DISABLED=true — treating all {vid_planned} clips as images")
+            for item in media_plan:
+                item["type"] = "image"
+            img_planned += vid_planned
+            vid_planned = 0
+
         print(f"  [Visual Agent] Plan: {img_planned} images + {vid_planned} AI clips. Generating...")
 
         state.images_dir.mkdir(parents=True, exist_ok=True)

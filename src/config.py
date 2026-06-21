@@ -45,6 +45,10 @@ FAL_IMAGE_MODEL: str = os.getenv("FAL_IMAGE_MODEL", "fal-ai/flux-pro/v1.1")
 # Upgrade: "fal-ai/kling-video/v3/pro/image-to-video" (~$0.63 per 5s, more cinematic)
 FAL_VIDEO_MODEL: str = os.getenv("FAL_VIDEO_MODEL", "fal-ai/kling-video/v3/standard/image-to-video")
 
+# Set FAL_VIDEO_DISABLED=true in .env to skip AI clip generation entirely (images only)
+# Useful for budget testing or when fal.ai balance is low
+FAL_VIDEO_DISABLED: bool = os.getenv("FAL_VIDEO_DISABLED", "false").lower() == "true"
+
 # Pexels — free stock video clips (optional, kept as fallback)
 # Sign up at https://www.pexels.com/api/ — free, no credit card needed
 PEXELS_API_KEY: str | None = os.getenv("PEXELS_API_KEY") or None
