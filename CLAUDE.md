@@ -79,3 +79,18 @@ This is a personal learning and portfolio project.
 2. Are docs updated for anything new added?
 3. Does the code follow PEP8?
 4. Is the commit message descriptive?
+
+---
+
+## Open TODOs
+
+### When ready to go full quality (remove test limits):
+1. `.env` — set `TEST_MODE=false`
+2. `.env` — set `FAL_IMAGE_MODEL=fal-ai/flux-pro/v1.1` (was schnell during testing)
+3. `.env` — set `FAL_VIDEO_DISABLED=false` (re-enable Kling AI clips)
+4. That's it — no code changes needed, config drives everything
+
+### Planned features not yet built:
+- **Shorts/Reels agent** — crop best 60s from final video to 9:16 vertical, add bold captions, export for YouTube Shorts / Instagram Reels / TikTok
+- **Captions/subtitles** — burn word-level captions onto video using ElevenLabs timestamps
+- **YouTube upload agent** — Phase 7, auto-upload with title, description, tags via YouTube Data API

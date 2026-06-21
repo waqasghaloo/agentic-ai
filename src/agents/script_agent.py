@@ -7,7 +7,7 @@ Why this is an agent (not just a function):
 """
 
 import anthropic
-from src.config import ANTHROPIC_API_KEY, CLAUDE_MODEL
+from src.config import ANTHROPIC_API_KEY, CLAUDE_MODEL, TEST_MODE, TEST_SCRIPT_WORDS
 
 
 # The system prompt is the agent's "personality" and instructions.
@@ -95,6 +95,15 @@ class ScriptAgent:
         # messages: the actual conversation — here just one user message
         # max_tokens: the maximum length of Claude's response
         #             (~750 words = ~1000 tokens, we give headroom with 2048
+        if TEST_MODE:
+            word_limit = (
+                f"\n\nTEST MODE: Write ONLY {TEST_SCRIPT_WORDS} words total. "
+                "One short hook paragraph and one main paragraph. No conclusion needed. "
+                "This is just for testing visuals and pipeline — not for publishing."
+            )
+        else:
+            word_limit = ""
+
         response = self.client.messages.create(
             model=self.model,
             max_tokens=4096,
@@ -102,7 +111,7 @@ class ScriptAgent:
             messages=[
                 {
                     "role": "user",
-                    "content": f"Write a YouTube video script about: {topic}",
+                    "content": f"Write a YouTube video script about: {topic}{word_limit}",
                 }
             ],
         )

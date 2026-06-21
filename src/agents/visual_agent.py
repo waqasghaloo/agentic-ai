@@ -19,7 +19,7 @@ Cost per video (~21 paragraphs, 30% video):
 
 import json
 import anthropic
-from src.config import ANTHROPIC_API_KEY, CLAUDE_MODEL, FAL_VIDEO_DISABLED
+from src.config import ANTHROPIC_API_KEY, CLAUDE_MODEL, FAL_VIDEO_DISABLED, TEST_MODE, TEST_MAX_PARAGRAPHS
 from src.tools.image_tool import generate_image
 from src.tools.video_tool import animate_image
 from src.pipeline.state import PipelineState
@@ -113,6 +113,9 @@ class VisualAgent:
             state:  PipelineState for this topic — media list saved here.
         """
         paragraphs = _split_paragraphs(script)
+        if TEST_MODE and len(paragraphs) > TEST_MAX_PARAGRAPHS:
+            print(f"  [Visual Agent] TEST_MODE: capping at {TEST_MAX_PARAGRAPHS} paragraphs (was {len(paragraphs)})")
+            paragraphs = paragraphs[:TEST_MAX_PARAGRAPHS]
 
         # Reuse Claude's media plan if already saved — saves API cost on resume
         if state.has_media_plan():

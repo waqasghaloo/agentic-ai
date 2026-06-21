@@ -52,3 +52,13 @@ FAL_VIDEO_DISABLED: bool = os.getenv("FAL_VIDEO_DISABLED", "false").lower() == "
 # Pexels — free stock video clips (optional, kept as fallback)
 # Sign up at https://www.pexels.com/api/ — free, no credit card needed
 PEXELS_API_KEY: str | None = os.getenv("PEXELS_API_KEY") or None
+
+# ── Test mode ─────────────────────────────────────────────────────────────────
+# TODO: Set TEST_MODE=false in .env once happy with quality.
+#       Currently limits script to ~150 words (1 min) and images to 4.
+#       Full videos need TEST_MODE=false: 900-1100 word scripts, 20+ images,
+#       AI clips enabled (FAL_VIDEO_DISABLED=false), Flux Pro images.
+TEST_MODE: bool = os.getenv("TEST_MODE", "false").lower() == "true"
+# At 150 words/min speaking pace: 1 min = 150 words, 7 min = ~1000 words
+TEST_SCRIPT_WORDS: int = 150
+TEST_MAX_PARAGRAPHS: int = 4
