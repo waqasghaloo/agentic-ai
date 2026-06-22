@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex items-start justify-between">
+  <div>
+    <h1 class="text-2xl font-bold text-white">Topics</h1>
+    <p class="text-gray-500 text-sm mt-1">Niche: <span class="text-gray-300">{{ niche }}</span>
+      {% if video_disabled %}
+        · <span class="text-yellow-400 font-semibold">Images only</span>
+      {% else %}
+        · <span class="text-green-400">Images + Clips</span>
+      {% endif %}
+    </p>
+  </div>
+  <a href="/config" class="text-sm text-brand hover:underline">⚙ Configure</a>
+</div>
+
+{% if topics %}
+<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+  {% for t in topics %}
+  <a href="/topic/{{ t.folder }}" class="block bg-gray-900 border border-gray-800 rounded-xl overflow-hidden hover:border-brand transition group">
+
+    <!-- Thumbnail -->
+    <div class="aspect-video bg-gray-800 relative overflow-hidden">
+      {% if t.thumbnail_web %}
+        <img src="{{ t.thumbnail_web }}"
+             alt="thumbnail"
+             class="w-full h-full object-cover group-hover:scale-105 transition duration-300" />
+      {% else %}
+        <div class="w-full h-full flex flex-col items-center justify-center p-4 text-center bg-gray-800">
+          <div class="text-gray-500 text-3xl mb-2">🎬</div>
+          <div class="text-gray-400 text-xs leading-snug">{{ t.topic[:60] }}{% if t.topic|length > 60 %}...{% endif %}</div>
+        </div>
+      {% endif %}
+      <!-- Status badge -->
+      <div class="absolute top-2 right-2">
+        {% if t.has_video %}
+          <span class="bg-green-500 text-white text-xs font-bold px-2 py-0.5 rounded">✓ DONE</span>
+        {% else %}
+          <span class="bg-yellow-500 text-black text-xs font-bold px-2 py-0.5 rounded">IN PROGRESS</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Info -->
+    <div class="p-4">
+      <div class="text-xs text-gray-500 font-mono mb-1">{{ t.folder[:20] }}...</div>
+      {% if t.title %}
+        <h3 class="text-sm font-semibold text-white leading-snug mb-2">{{ t.title }}</h3>
+      {% else %}
+        <h3 class="text-sm text-gray-400 italic leading-snug mb-2">{{ t.topic[:80] }}...</h3>
+      {% endif %}
+      <div class="flex gap-3 text-xs text-gray-500">
+        <span>{{ t.image_count }} images</span>
+        {% if t.clip_count > 0 %}
+          <span>{{ t.clip_count }} clips</span>
+        {% endif %}
+        <span>{{ t.media_count }} total visuals</span>
+      </div>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="bg-gray-900 border border-gray-800 rounded-xl p-12 text-center">
+  <div class="text-4xl mb-3">🎬</div>
+  <h2 class="text-lg font-semibold text-white mb-1">No topics yet</h2>
+  <p class="text-gray-500 text-sm mb-6">Click "Run Pipeline" to generate your first video.</p>
+  <button onclick="triggerRun()" class="bg-brand text-white px-6 py-2 rounded font-semibold hover:bg-orange-500 transition">
+    ▶ Run Pipeline
+  </button>
+</div>
+{% endif %}
+{% endblock %}

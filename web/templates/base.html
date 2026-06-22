@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Pipeline{% endblock %} — Video Pipeline</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: '#f97316',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Inter', system-ui, sans-serif; }
+    .prompt-box { font-size: 0.78rem; line-height: 1.5; }
+    .effect-badge { font-size: 0.65rem; letter-spacing: 0.05em; }
+    details > summary { cursor: pointer; user-select: none; }
+    details > summary::-webkit-details-marker { display: none; }
+    pre { white-space: pre-wrap; word-break: break-word; }
+  </style>
+</head>
+<body class="bg-gray-950 text-gray-200 min-h-screen">
+
+  <!-- Nav -->
+  <nav class="bg-gray-900 border-b border-gray-800 px-6 py-3 flex items-center gap-6">
+    <a href="/" class="text-brand font-bold text-lg tracking-tight">▶ Pipeline</a>
+    <a href="/" class="text-gray-400 hover:text-white text-sm">Dashboard</a>
+    <a href="/config" class="text-gray-400 hover:text-white text-sm">Config</a>
+    <div class="ml-auto flex items-center gap-3">
+      <span id="run-status" class="text-xs text-gray-500"></span>
+      <button
+        onclick="triggerRun()"
+        class="bg-brand hover:bg-orange-500 text-white text-sm font-semibold px-4 py-1.5 rounded transition"
+      >
+        ▶ Run Pipeline
+      </button>
+    </div>
+  </nav>
+
+  <!-- Content -->
+  <main class="px-6 py-8 max-w-screen-2xl mx-auto">
+    {% block content %}{% endblock %}
+  </main>
+
+  <script>
+    async function triggerRun() {
+      const btn = document.querySelector('button[onclick="triggerRun()"]');
+      btn.disabled = true;
+      btn.textContent = '⏳ Starting...';
+      try {
+        const res = await fetch('/api/run', { method: 'POST' });
+        const data = await res.json();
+        if (data.status === 'already_running') {
+          document.getElementById('run-status').textContent = '⚡ Already running (PID ' + data.pid + ')';
+        } else {
+          document.getElementById('run-status').textContent = '🟢 Running (PID ' + data.pid + ')';
+        }
+      } catch(e) {
+        document.getElementById('run-status').textContent = '❌ Failed to start';
+      }
+      btn.disabled = false;
+      btn.textContent = '▶ Run Pipeline';
+    }
+
+    // Poll status every 10s
+    async function checkStatus() {
+      try {
+        const res = await fetch('/api/status');
+        const data = await res.json();
+        const el = document.getElementById('run-status');
+        if (data.status === 'running') {
+          el.textContent = '🟢 Pipeline running (PID ' + data.pid + ')';
+        } else if (data.status === 'finished') {
+          el.textContent = data.exit_code === 0 ? '✅ Last run complete' : '❌ Last run failed (exit ' + data.exit_code + ')';
+        }
+      } catch(e) {}
+    }
+    checkStatus();
+    setInterval(checkStatus, 10000);
+  </script>
+</body>
+</html>

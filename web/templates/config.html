@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% block title %}Config{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl">
+
+  <h1 class="text-2xl font-bold text-white mb-1">Pipeline Config</h1>
+  <p class="text-gray-500 text-sm mb-6">Non-secret settings. API keys must be edited in <code class="text-orange-400">.env</code> directly.</p>
+
+  {% if saved %}
+  <div class="bg-green-900/30 border border-green-700 text-green-300 text-sm rounded-lg px-4 py-3 mb-6">
+    ✓ Settings saved to .env
+  </div>
+  {% endif %}
+
+  <form method="post" action="/config" class="space-y-6">
+
+    <!-- Niche -->
+    <div>
+      <label class="block text-sm font-semibold text-gray-300 mb-1">Channel Niche</label>
+      <p class="text-xs text-gray-500 mb-2">What the Research Agent searches for. Keep it specific and US-focused.</p>
+      <textarea name="channel_niche" rows="3"
+        class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-gray-200 text-sm focus:outline-none focus:border-brand"
+      >{{ env.get('CHANNEL_NICHE', 'AI and technology impact on American jobs, money, and everyday life') }}</textarea>
+    </div>
+
+    <!-- Image model -->
+    <div>
+      <label class="block text-sm font-semibold text-gray-300 mb-1">Image Model</label>
+      <p class="text-xs text-gray-500 mb-2">Flux Pro = best quality ($0.05/image). Flux Schnell = fast & cheap ($0.003/image).</p>
+      <select name="fal_image_model"
+        class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-gray-200 text-sm focus:outline-none focus:border-brand">
+        <option value="fal-ai/flux-pro/v1.1" {% if env.get('FAL_IMAGE_MODEL','') == 'fal-ai/flux-pro/v1.1' %}selected{% endif %}>
+          Flux Pro v1.1 — best quality, $0.05/image
+        </option>
+        <option value="fal-ai/flux/schnell" {% if env.get('FAL_IMAGE_MODEL','') == 'fal-ai/flux/schnell' %}selected{% endif %}>
+          Flux Schnell — budget, $0.003/image
+        </option>
+      </select>
+    </div>
+
+    <!-- Video disabled -->
+    <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
+      <label class="flex items-start gap-3 cursor-pointer">
+        <input type="checkbox" name="fal_video_disabled" value="true"
+          {% if env.get('FAL_VIDEO_DISABLED','false').lower() == 'true' %}checked{% endif %}
+          class="mt-0.5 h-4 w-4 rounded border-gray-600 accent-orange-500" />
+        <div>
+          <span class="text-sm font-semibold text-gray-200">Images only (no Kling clips)</span>
+          <p class="text-xs text-gray-500 mt-0.5">Disables AI video generation. Faster, cheaper. Still uses Flux Pro for images.</p>
+        </div>
+      </label>
+    </div>
+
+    <!-- Test mode -->
+    <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
+      <label class="flex items-start gap-3 cursor-pointer">
+        <input type="checkbox" name="test_mode" value="true"
+          {% if env.get('TEST_MODE','false').lower() == 'true' %}checked{% endif %}
+          class="mt-0.5 h-4 w-4 rounded border-gray-600 accent-orange-500" />
+        <div>
+          <span class="text-sm font-semibold text-gray-200">Test mode</span>
+          <p class="text-xs text-gray-500 mt-0.5">Caps script to ~150 words and 4 images. Good for testing pipeline changes before spending credits.</p>
+        </div>
+      </label>
+    </div>
+
+    <!-- Voice ID -->
+    <div>
+      <label class="block text-sm font-semibold text-gray-300 mb-1">ElevenLabs Voice ID</label>
+      <p class="text-xs text-gray-500 mb-2">Adam (pNInz6obpgDQGcFmaJgB) = deep American male, authoritative. Find more at elevenlabs.io/voice-library</p>
+      <div class="space-y-2">
+        <label class="flex items-center gap-2 cursor-pointer text-sm text-gray-300">
+          <input type="radio" name="elevenlabs_voice_id" value="pNInz6obpgDQGcFmaJgB"
+            {% if env.get('ELEVENLABS_VOICE_ID','pNInz6obpgDQGcFmaJgB') == 'pNInz6obpgDQGcFmaJgB' %}checked{% endif %}
+            class="accent-orange-500" />
+          Adam — deep, authoritative, US male
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer text-sm text-gray-300">
+          <input type="radio" name="elevenlabs_voice_id" value="ErXwobaYiN019PkySvjV"
+            {% if env.get('ELEVENLABS_VOICE_ID','') == 'ErXwobaYiN019PkySvjV' %}checked{% endif %}
+            class="accent-orange-500" />
+          Antoni — warm, American male
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer text-sm text-gray-300">
+          <input type="radio" name="elevenlabs_voice_id" value="VR6AewLTigWG4xSOukaG"
+            {% if env.get('ELEVENLABS_VOICE_ID','') == 'VR6AewLTigWG4xSOukaG' %}checked{% endif %}
+            class="accent-orange-500" />
+          Arnold — strong, commanding
+        </label>
+      </div>
+      <div class="mt-2 flex items-center gap-2">
+        <span class="text-xs text-gray-500">Custom ID:</span>
+        <input type="text" name="elevenlabs_voice_id_custom" placeholder="paste voice ID to override radio selection..."
+          class="flex-1 bg-gray-800 border border-gray-700 rounded px-2 py-1 text-gray-200 text-xs focus:outline-none focus:border-brand" />
+      </div>
+    </div>
+
+    <!-- Claude model -->
+    <div>
+      <label class="block text-sm font-semibold text-gray-300 mb-1">Claude Model</label>
+      <select name="claude_model"
+        class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-gray-200 text-sm focus:outline-none focus:border-brand">
+        <option value="claude-sonnet-4-6" {% if env.get('CLAUDE_MODEL','claude-sonnet-4-6') == 'claude-sonnet-4-6' %}selected{% endif %}>
+          claude-sonnet-4-6 (recommended — fast + high quality)
+        </option>
+        <option value="claude-haiku-4-5-20251001" {% if env.get('CLAUDE_MODEL','') == 'claude-haiku-4-5-20251001' %}selected{% endif %}>
+          claude-haiku-4-5 (fastest, cheapest — lower quality)
+        </option>
+        <option value="claude-opus-4-8" {% if env.get('CLAUDE_MODEL','') == 'claude-opus-4-8' %}selected{% endif %}>
+          claude-opus-4-8 (highest quality — more expensive)
+        </option>
+      </select>
+    </div>
+
+    <!-- Save -->
+    <div class="flex gap-3 pt-2">
+      <button type="submit"
+        class="bg-brand hover:bg-orange-500 text-white font-semibold px-6 py-2 rounded transition">
+        Save Settings
+      </button>
+      <a href="/" class="text-gray-500 hover:text-white px-4 py-2 rounded text-sm">Cancel</a>
+    </div>
+
+  </form>
+
+  <!-- Read-only: API key status -->
+  <div class="mt-8 border-t border-gray-800 pt-6">
+    <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">API Keys (read-only — edit .env directly)</h2>
+    <div class="space-y-2 text-sm">
+      <div class="flex items-center gap-2">
+        {% if env.get('ANTHROPIC_API_KEY') %}
+          <span class="text-green-400">✓</span>
+        {% else %}
+          <span class="text-red-400">✗</span>
+        {% endif %}
+        <span class="text-gray-400">ANTHROPIC_API_KEY</span>
+        {% if env.get('ANTHROPIC_API_KEY') %}
+          <span class="text-gray-600 font-mono text-xs">{{ env.ANTHROPIC_API_KEY[:8] }}...</span>
+        {% endif %}
+      </div>
+      <div class="flex items-center gap-2">
+        {% if env.get('ELEVENLABS_API_KEY') %}
+          <span class="text-green-400">✓</span>
+        {% else %}
+          <span class="text-red-400">✗</span>
+        {% endif %}
+        <span class="text-gray-400">ELEVENLABS_API_KEY</span>
+      </div>
+      <div class="flex items-center gap-2">
+        {% if env.get('FAL_KEY') %}
+          <span class="text-green-400">✓</span>
+        {% else %}
+          <span class="text-red-400">✗</span>
+        {% endif %}
+        <span class="text-gray-400">FAL_KEY</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

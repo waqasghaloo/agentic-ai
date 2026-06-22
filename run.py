@@ -14,11 +14,15 @@ Usage:
     poetry run python run.py "My Topic"    # force a specific topic (skip research)
 """
 
+from src.config import CHANNEL_NICHE
 from src.agents.research_agent import ResearchAgent
 from src.agents.script_agent import ScriptAgent
 from src.agents.voice_agent import VoiceAgent
 from src.agents.visual_agent import VisualAgent
 from src.agents.editor_agent import EditorAgent
+from src.agents.youtube_agent import YouTubeMetaAgent
+from src.agents.shorts_agent import ShortsAgent
+from src.agents.platform_agent import PlatformAgent
 from src.pipeline.state import PipelineState, find_incomplete_state
 
 
@@ -65,17 +69,29 @@ def _run_steps(state: PipelineState) -> None:
         video_path = EditorAgent().run(state)
     print()
 
+    # Step 6: YouTube metadata + thumbnail
+    print("[6/7] YouTube Agent generating title, description, tags, thumbnail...")
+    yt_meta = YouTubeMetaAgent().run(state)
+    print()
+
+    # Step 7: Platform cuts + optimised captions (TikTok / Instagram / Shorts)
+    print("[7/7] Platform Agent creating Shorts cuts and platform captions...")
+    ShortsAgent().run(state)
+    PlatformAgent().run(state)
+    print()
+
     media_list = state.get_media_list()
     img_count = sum(1 for m in media_list if m["type"] == "image")
     vid_count = sum(1 for m in media_list if m["type"] == "video")
 
     print("=" * 60)
     print("Pipeline complete.")
-    print(f"Folder:  {state.dir}")
-    print(f"Topic:   {topic}")
-    print(f"Audio:   {state.audio_path}")
-    print(f"Media:   {img_count} images + {vid_count} clips")
-    print(f"Video:   {video_path}")
+    print(f"Folder:    {state.dir}")
+    print(f"Topic:     {topic}")
+    print(f"Video:     {video_path}")
+    print(f"Title:     {yt_meta['title']}")
+    print(f"Media:     {img_count} images + {vid_count} clips")
+    print(f"Platforms: {state.platforms_dir}")
     print("=" * 60)
 
 
@@ -109,4 +125,4 @@ if __name__ == "__main__":
         state = PipelineState(topic)
         _run_steps(state)
     else:
-        run_pipeline(niche="educational science")
+        run_pipeline(niche=CHANNEL_NICHE)

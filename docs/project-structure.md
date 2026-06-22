@@ -17,6 +17,7 @@ agentic-ai/
 ├── README.md           → Project overview for anyone visiting the repo.
 ├── docs/               → All documentation lives here.
 ├── src/                → All source code lives here.
+├── web/                → Flask web portal (review prompts/images, configure pipeline).
 └── tests/              → All tests live here, mirroring src/ structure.
 ```
 
@@ -34,8 +35,11 @@ src/
 │   ├── research_agent.py
 │   ├── script_agent.py
 │   ├── voice_agent.py
-│   ├── visual_agent.py
+│   ├── visual_agent.py → Generates image/video plan; batches Claude calls to avoid token limit.
 │   ├── editor_agent.py
+│   ├── platform_agent.py → TikTok/Instagram/Facebook captions and growth tips.
+│   ├── shorts_agent.py → Identifies best 60s moment for YouTube Shorts cut.
+│   ├── youtube_agent.py → YouTube title, description, tags, metadata.
 │   ├── metadata_agent.py
 │   └── upload_agent.py
 │

@@ -174,6 +174,18 @@ class PipelineState:
     def video_path(self) -> Path:
         return self.dir / "final.mp4"
 
+    @property
+    def youtube_path(self) -> Path:
+        return self.dir / "youtube.json"
+
+    @property
+    def thumbnail_path(self) -> Path:
+        return self.dir / "thumbnail.png"
+
+    @property
+    def platforms_dir(self) -> Path:
+        return self.dir / "platforms"
+
     # ── Metadata ─────────────────────────────────────────────────────────────
 
     def _load(self) -> dict:
@@ -268,3 +280,15 @@ class PipelineState:
 
     def has_video(self) -> bool:
         return self.video_path.exists()
+
+    # ── YouTube metadata ──────────────────────────────────────────────────────
+
+    def has_youtube_meta(self) -> bool:
+        return self.youtube_path.exists()
+
+    def get_youtube_meta(self) -> dict:
+        return json.loads(self.youtube_path.read_text())
+
+    def save_youtube_meta(self, meta: dict) -> None:
+        self.youtube_path.write_text(json.dumps(meta, indent=2))
+        self._mark_done("youtube_meta")

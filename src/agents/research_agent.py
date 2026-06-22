@@ -6,23 +6,81 @@ It gives Claude access to a web search tool and lets Claude decide
 when to use it, what to search for, and how to interpret the results.
 """
 
+import re
 import anthropic
 from src.config import ANTHROPIC_API_KEY, CLAUDE_MODEL
 from src.tools.search_tool import SEARCH_TOOL_DEFINITION, search_web
 
 
+def _extract_topic(text: str) -> str:
+    """
+    Extract the clean topic sentence from Claude's response.
+
+    Claude often reasons before answering (scoring tables, analysis).
+    The topic sentence is always the last line that:
+    - Looks like a proper sentence (starts with capital letter or quote)
+    - Is long enough to be a topic (>40 chars)
+    - Is not a markdown element (table, header, bullet, emoji-tagged)
+    """
+    lines = [l.strip() for l in text.strip().split("\n") if l.strip()]
+
+    # Exclude markdown artifacts
+    def is_topic_line(line: str) -> bool:
+        if line.startswith("|"):       return False  # table row
+        if line.startswith("#"):       return False  # heading
+        if line.startswith("**"):      return False  # bold label
+        if line.startswith("- "):      return False  # bullet
+        if line.startswith("* "):      return False  # bullet
+        if line.startswith("---"):     return False  # divider
+        if line.startswith("> "):      return False  # blockquote
+        if "✅" in line or "⚠️" in line or "❌" in line:  return False  # scoring rows
+        if len(line) < 40:             return False  # too short
+        return True
+
+    candidates = [l for l in lines if is_topic_line(l)]
+    if candidates:
+        return candidates[-1]
+
+    # Fallback: last non-empty line
+    return lines[-1] if lines else "Could not determine a topic."
+
+
 SYSTEM_PROMPT = """
-You are a YouTube content research specialist. Your job is to find the single best
-topic for a YouTube video that will perform well today.
+You are a viral content strategist for a YouTube/TikTok channel targeting the US market.
+Your job is to find ONE topic that will get clicks, views, and shares TODAY.
 
-When given a channel niche:
-1. Search for what is trending or popular in that niche right now
-2. Evaluate the results for viewer interest and content potential
-3. Return ONLY the chosen topic as a single clear sentence
+CHANNEL IDENTITY:
+This channel covers AI and technology stories that directly affect American people's money,
+jobs, and everyday lives. Think Vice meets Veritasium — documentary urgency, real human stakes.
 
-Example output: "How NASA's new telescope is rewriting what we know about dark matter"
+WHAT MAKES A WINNING TOPIC (all four must be true):
+1. PERSONAL STAKE — the viewer can see how this directly affects THEM (their job, money, health, future)
+2. SHOCK VALUE — there is a genuinely surprising or counterintuitive fact at the centre
+3. SEARCH DEMAND — people are actively searching related keywords right now (recent news angle helps)
+4. UNDERSERVED — not already covered this week by a channel with 1M+ subscribers with fresh content
 
-Do not explain your reasoning. Just return the topic sentence.
+SEARCH STRATEGY (run multiple searches before deciding):
+- Search: what's trending on TikTok and YouTube about AI and jobs this week
+- Search: latest AI news that affects American workers or money
+- Search: viral technology stories US market [current week]
+- Search: what people fear or are excited about regarding AI right now
+- Pick the ONE topic with the strongest combination of all four winning criteria above
+
+TOPIC FORMULA (follow this exactly):
+"[Specific shocking development] — [specific impact on American viewer's life/money/job]"
+
+STRONG EXAMPLES (notice: specific, personal, urgent):
+- "The AI system Walmart just deployed that eliminated 4,200 overnight jobs — and which stores are next"
+- "The one salary range economists say AI cannot touch for the next 10 years"
+- "How a 26-year-old used a $20/month AI tool to replace his $85,000/year graphic design job"
+- "The hidden clause in Apple's new AI terms that means they can use your photos to train models"
+
+WEAK EXAMPLES (avoid these — too generic, no personal stake):
+- "How AI is changing the world"
+- "The latest developments in quantum computing"
+- "Scientists discover new exoplanet"
+
+OUTPUT: Return ONLY the topic sentence. No explanation, no options, no commentary.
 """
 
 
@@ -55,8 +113,10 @@ class ResearchAgent:
             {
                 "role": "user",
                 "content": (
-                    f"Find the best trending YouTube video topic for a channel about: {niche}. "
-                    f"Search the web to see what is popular and trending right now."
+                    f"Find the best viral YouTube/TikTok topic for this channel niche: {niche}. "
+                    f"Run at least 3 different searches covering: trending AI/tech news, "
+                    f"what's viral on TikTok this week, and what US audiences are worried about or excited about "
+                    f"regarding technology right now. Then pick the single strongest topic."
                 ),
             }
         ]
@@ -75,10 +135,9 @@ class ResearchAgent:
 
             # Claude is done — no more tools needed, final answer is ready
             if response.stop_reason == "end_turn":
-                # Extract the text from the final response
                 for block in response.content:
                     if hasattr(block, "text"):
-                        return block.text
+                        return _extract_topic(block.text)
                 return "Could not determine a topic."
 
             # Claude wants to use a tool — execute it and send results back

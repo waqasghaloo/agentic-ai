@@ -49,11 +49,39 @@ Every external tool or API used in this project — what it does, why it was cho
 
 ---
 
-*(More tools added here as each phase introduces them)*
+---
+
+## fal.ai + Kling v3 (AI video clips)
+- **What:** Text-to-video / image-to-video generation via fal.ai hosting Kling v3 standard.
+- **Why chosen:** Same API key as Flux. Kling v3 produces smooth, realistic motion from a still image.
+- **Used by:** `src/agents/visual_agent.py` (when `FAL_VIDEO_DISABLED` is not set).
+- **Cost:** ~$0.42 per 5-second clip. Disabled by default via `FAL_VIDEO_DISABLED=true` to save cost.
+- **Added:** Phase 6
+
+---
+
+## Flask (web portal)
+- **What:** Lightweight Python web framework.
+- **Why chosen:** FastAPI + Jinja2 is broken on Python 3.14 (LRU cache incompatibility). Flask works cleanly on 3.14.
+- **Used by:** `web/app.py` — the local web portal for reviewing prompts/images and configuring the pipeline.
+- **Start:** `poetry run python -m web.app` → http://localhost:8000
+- **Added:** Phase 7
+
+---
+
+## Pillow (image processing)
+- **What:** Python Imaging Library fork — reads, modifies, and saves image files.
+- **Why chosen:** Used for professional text rendering on thumbnails and scene images. Supports Impact font, stroke outlines, gradient overlays.
+- **Used by:** `src/tools/thumbnail_tool.py` — `add_text_to_thumbnail()`, `make_vertical_cover()`, `burn_overlay_text()`.
+- **Added:** Phase 7
+
+---
 
 | Phase | Tool | Purpose |
 |---|---|---|
 | Phase 3 | ElevenLabs | Text-to-speech voiceover generation |
-| Phase 3 | DALL-E 3 / Flux | AI image generation for visuals |
-| Phase 3 | MoviePy + FFmpeg | Video editing and compilation |
-| Phase 5 | YouTube Data API v3 | Uploading videos to YouTube |
+| Phase 5 | fal.ai + Flux Pro | AI image generation |
+| Phase 6 | fal.ai + Kling v3 | AI video clip generation |
+| Phase 6 | MoviePy + FFmpeg | Video editing and compilation |
+| Phase 7 | Flask | Local web portal |
+| Phase 7 | Pillow | Thumbnail and overlay text rendering |

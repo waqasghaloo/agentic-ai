@@ -82,14 +82,19 @@ This is a personal learning and portfolio project.
 
 ---
 
+## Channel Strategy
+
+- **Niche**: AI and technology impact on American jobs, money, and everyday life
+- **Target audience**: US adults 25-45, YouTube + TikTok + Instagram
+- **Voice**: Adam (ElevenLabs) — deep American male, authoritative
+- **Video length**: 8-10 minutes (unlocks mid-roll ads, 3-4 ad breaks per video)
+- **Monetization path**: YouTube Partner Program (1,000 subs + 4,000 watch hours)
+- **Platforms**: YouTube (long-form + Shorts) + TikTok + Instagram Reels + Facebook Reels
+
 ## Open TODOs
 
-### When ready to go full quality (remove test limits):
-1. `.env` — set `TEST_MODE=false`
-2. That's it — Flux Pro images and Kling clips are already enabled.
-   No other code or config changes needed.
-
 ### Planned features not yet built:
-- **Shorts/Reels agent** — crop best 60s from final video to 9:16 vertical, add bold captions, export for YouTube Shorts / Instagram Reels / TikTok
-- **Captions/subtitles** — burn word-level captions onto video using ElevenLabs timestamps
-- **YouTube upload agent** — Phase 7, auto-upload with title, description, tags via YouTube Data API
+- **Burned-in captions** — word-level subtitles on video using ElevenLabs timestamps (boosts retention + accessibility)
+- **Trending sound suggestions** — recommend viral TikTok sounds for Shorts cuts
+- **YouTube auto-upload agent** — Phase 7, YouTube Data API (title, description, tags, thumbnail)
+- **A/B thumbnail testing** — generate 2-3 thumbnail variants, track CTR

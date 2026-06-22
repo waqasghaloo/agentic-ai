@@ -29,7 +29,7 @@ CLAUDE_MODEL: str = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-6")
 
 # ElevenLabs
 ELEVENLABS_API_KEY: str = _require("ELEVENLABS_API_KEY")
-ELEVENLABS_VOICE_ID: str = os.getenv("ELEVENLABS_VOICE_ID", "JBFqnCBsd6RMkjVDRZzb")  # George — clear, natural, neutral accent
+ELEVENLABS_VOICE_ID: str = os.getenv("ELEVENLABS_VOICE_ID", "pNInz6obpgDQGcFmaJgB")  # Adam — deep, authoritative American male, proven for US edu content
 ELEVENLABS_MODEL: str = os.getenv("ELEVENLABS_MODEL", "eleven_multilingual_v2")
 
 # fal.ai — image + video generation
@@ -52,6 +52,12 @@ FAL_VIDEO_DISABLED: bool = os.getenv("FAL_VIDEO_DISABLED", "false").lower() == "
 # Pexels — free stock video clips (optional, kept as fallback)
 # Sign up at https://www.pexels.com/api/ — free, no credit card needed
 PEXELS_API_KEY: str | None = os.getenv("PEXELS_API_KEY") or None
+
+# ── Channel ───────────────────────────────────────────────────────────────────
+CHANNEL_NICHE: str = os.getenv(
+    "CHANNEL_NICHE",
+    "AI and technology impact on American jobs, money, and everyday life"
+)
 
 # ── Test mode ─────────────────────────────────────────────────────────────────
 # TODO: Set TEST_MODE=false in .env once happy with quality.

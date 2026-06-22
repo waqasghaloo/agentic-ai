@@ -1,0 +1,268 @@
+{% extends "base.html" %}
+{% block title %}{{ yt_meta.get('title', folder_name) }}{% endblock %}
+
+{% block content %}
+
+<!-- Header -->
+<div class="mb-6">
+  <a href="/" class="text-gray-500 hover:text-gray-300 text-sm">← Dashboard</a>
+  <h1 class="text-2xl font-bold text-white mt-2">
+    {{ yt_meta.get('title', 'No title yet') }}
+  </h1>
+  <p class="text-gray-500 text-sm mt-1 font-mono">{{ folder_name }}</p>
+  <p class="text-gray-400 text-sm mt-1 italic">{{ meta.topic }}</p>
+</div>
+
+<!-- Two-column layout: left = thumbnail + meta, right = tabs -->
+<div class="grid grid-cols-1 xl:grid-cols-4 gap-6">
+
+  <!-- Left sidebar -->
+  <div class="xl:col-span-1 space-y-4">
+
+    <!-- Thumbnail -->
+    {% if has_thumbnail %}
+    <div class="rounded-xl overflow-hidden border border-gray-800">
+      <img src="{{ thumbnail_web_path }}" alt="thumbnail" class="w-full object-cover" />
+    </div>
+    {% endif %}
+
+    <!-- Stats -->
+    <div class="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-2 text-sm">
+      <div class="flex justify-between">
+        <span class="text-gray-500">Status</span>
+        {% if has_video %}
+          <span class="text-green-400 font-semibold">✓ Complete</span>
+        {% else %}
+          <span class="text-yellow-400">In progress</span>
+        {% endif %}
+      </div>
+      <div class="flex justify-between">
+        <span class="text-gray-500">Visuals</span>
+        <span class="text-white">{{ media_plan | length }} scenes</span>
+      </div>
+      <div class="flex justify-between">
+        <span class="text-gray-500">Images</span>
+        <span class="text-white">{{ media_plan | selectattr('type', 'equalto', 'image') | list | length }}</span>
+      </div>
+      <div class="flex justify-between">
+        <span class="text-gray-500">Clips</span>
+        <span class="text-white">{{ media_plan | selectattr('type', 'equalto', 'video') | list | length }}</span>
+      </div>
+    </div>
+
+    <!-- YouTube meta -->
+    {% if yt_meta %}
+    <div class="bg-gray-900 border border-gray-800 rounded-xl p-4 text-sm space-y-2">
+      <div class="text-gray-400 font-semibold text-xs uppercase tracking-wider mb-2">YouTube</div>
+      {% if yt_meta.tags %}
+      <details>
+        <summary class="text-gray-500 hover:text-white cursor-pointer">{{ yt_meta.tags | length }} tags ▾</summary>
+        <div class="mt-2 flex flex-wrap gap-1.5">
+          {% for tag in yt_meta.tags %}
+            <span class="bg-gray-800 text-gray-300 text-xs px-2 py-0.5 rounded">{{ tag }}</span>
+          {% endfor %}
+        </div>
+      </details>
+      {% endif %}
+      {% if yt_meta.hashtags %}
+      <div class="flex flex-wrap gap-1.5">
+        {% for h in yt_meta.hashtags[:6] %}
+          <span class="bg-blue-900 text-blue-300 text-xs px-2 py-0.5 rounded">{{ h }}</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Platform covers -->
+    <div class="bg-gray-900 border border-gray-800 rounded-xl p-4 text-sm">
+      <div class="text-gray-400 font-semibold text-xs uppercase tracking-wider mb-3">Platform Covers</div>
+
+      <!-- YouTube final thumbnail -->
+      <div class="mb-3">
+        <div class="text-gray-500 text-xs mb-1">YouTube</div>
+        <img src="/output/topics/{{ folder_name }}/platforms/youtube/thumbnail_final.png"
+             alt="YouTube thumbnail"
+             class="w-full rounded border border-gray-800"
+             onerror="this.style.display='none'" />
+      </div>
+
+      <!-- Vertical covers grid -->
+      <div class="grid grid-cols-3 gap-2 mt-2">
+        {% for platform in ['tiktok', 'instagram', 'facebook'] %}
+        <div>
+          <div class="text-gray-500 text-xs mb-1 capitalize">{{ platform }}</div>
+          <img src="/output/topics/{{ folder_name }}/platforms/{{ platform }}/cover.png"
+               alt="{{ platform }} cover"
+               class="w-full rounded border border-gray-800 aspect-[9/16] object-cover"
+               onerror="this.style.display='none'" />
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- Shorts thumbnail -->
+      <div class="mt-2">
+        <div class="text-gray-500 text-xs mb-1">Shorts</div>
+        <img src="/output/topics/{{ folder_name }}/platforms/shorts/thumbnail.png"
+             alt="Shorts thumbnail"
+             class="w-16 rounded border border-gray-800"
+             onerror="this.style.display='none'" />
+      </div>
+    </div>
+
+    <!-- Platform captions -->
+    {% if captions %}
+    <div class="bg-gray-900 border border-gray-800 rounded-xl p-4 text-sm">
+      <div class="text-gray-400 font-semibold text-xs uppercase tracking-wider mb-3">Captions</div>
+      <div class="space-y-1">
+        {% for platform, cap in captions.items() %}
+        <details class="border border-gray-800 rounded p-2">
+          <summary class="text-gray-300 hover:text-white capitalize">{{ platform }}</summary>
+          <pre class="text-gray-400 text-xs mt-2 bg-gray-800 p-2 rounded">{{ cap[:400] }}{% if cap|length > 400 %}...{% endif %}</pre>
+        </details>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Growth tips -->
+    {% if growth_tips %}
+    <details class="bg-gray-900 border border-gray-800 rounded-xl p-4 text-sm">
+      <summary class="text-gray-400 font-semibold text-xs uppercase tracking-wider cursor-pointer hover:text-white">Growth Tips ▾</summary>
+      <pre class="text-gray-400 text-xs mt-3">{{ growth_tips }}</pre>
+    </details>
+    {% endif %}
+
+  </div>
+
+  <!-- Right main content: Prompts + Script -->
+  <div class="xl:col-span-3 space-y-6">
+
+    <!-- Tab navigation -->
+    <div class="flex gap-1 border-b border-gray-800 pb-0 -mb-0">
+      <button onclick="showTab('prompts')" id="tab-prompts"
+        class="tab-btn px-4 py-2 text-sm font-medium border-b-2 border-brand text-white transition">
+        🎬 Prompts & Images
+      </button>
+      <button onclick="showTab('script')" id="tab-script"
+        class="tab-btn px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-white transition">
+        📄 Script
+      </button>
+      {% if yt_meta.description %}
+      <button onclick="showTab('description')" id="tab-description"
+        class="tab-btn px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-white transition">
+        📝 YouTube Description
+      </button>
+      {% endif %}
+    </div>
+
+    <!-- PROMPTS TAB -->
+    <div id="panel-prompts">
+      {% if media_plan %}
+      <div class="space-y-4">
+        {% for item in media_plan %}
+        <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+
+          <!-- Scene header -->
+          <div class="flex items-center gap-3 px-4 py-2.5 border-b border-gray-800 bg-gray-800/50">
+            <span class="text-gray-500 text-xs font-mono w-6">{{ loop.index0 }}</span>
+            {% if item.type == 'video' %}
+              <span class="bg-purple-900 text-purple-300 text-xs font-bold px-2 py-0.5 rounded effect-badge">CLIP</span>
+            {% else %}
+              <span class="bg-gray-700 text-gray-300 text-xs font-bold px-2 py-0.5 rounded effect-badge">IMAGE</span>
+              {% if item.effect %}
+                <span class="bg-orange-900/50 text-orange-400 text-xs px-2 py-0.5 rounded effect-badge font-mono">{{ item.effect }}</span>
+              {% endif %}
+            {% endif %}
+          </div>
+
+          <!-- Two columns: prompt | image -->
+          <div class="grid grid-cols-1 md:grid-cols-5 gap-0">
+
+            <!-- Prompts -->
+            <div class="md:col-span-3 p-4 space-y-3">
+              {% if item.image_prompt %}
+              <div>
+                <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                  {% if item.type == 'video' %}Base Frame{% else %}Image Prompt{% endif %}
+                </div>
+                <p class="prompt-box text-gray-300">{{ item.image_prompt }}</p>
+              </div>
+              {% endif %}
+              {% if item.motion_prompt %}
+              <div>
+                <div class="text-xs font-semibold text-purple-500 uppercase tracking-wider mb-1.5">Motion</div>
+                <p class="prompt-box text-purple-300 italic">{{ item.motion_prompt }}</p>
+              </div>
+              {% endif %}
+            </div>
+
+            <!-- Generated image -->
+            <div class="md:col-span-2 bg-gray-950 flex items-center justify-center min-h-32">
+              {% if item.web_image_path %}
+                <img src="{{ item.web_image_path }}"
+                     alt="scene {{ loop.index0 }}"
+                     class="w-full h-full object-cover max-h-52"
+                     onerror="this.parentElement.innerHTML='<span class=\'text-gray-700 text-xs p-4\'>Image not found</span>'" />
+              {% else %}
+                <span class="text-gray-700 text-xs">Not generated</span>
+              {% endif %}
+            </div>
+
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-8 text-center text-gray-500">
+          No media plan generated yet for this topic.
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- SCRIPT TAB -->
+    <div id="panel-script" class="hidden">
+      {% if script %}
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-6">
+        <pre class="text-gray-300 text-sm leading-relaxed">{{ script }}</pre>
+      </div>
+      {% else %}
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-8 text-center text-gray-500">
+          Script not found for this topic.
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- DESCRIPTION TAB -->
+    {% if yt_meta.description %}
+    <div id="panel-description" class="hidden">
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-6">
+        <pre class="text-gray-300 text-sm leading-relaxed">{{ yt_meta.description }}</pre>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+
+<script>
+function showTab(name) {
+  // Hide all panels
+  document.querySelectorAll('[id^="panel-"]').forEach(el => el.classList.add('hidden'));
+  // Deactivate all tabs
+  document.querySelectorAll('.tab-btn').forEach(el => {
+    el.classList.remove('border-brand', 'text-white');
+    el.classList.add('border-transparent', 'text-gray-500');
+  });
+  // Show selected panel
+  const panel = document.getElementById('panel-' + name);
+  if (panel) panel.classList.remove('hidden');
+  // Activate selected tab
+  const tab = document.getElementById('tab-' + name);
+  if (tab) {
+    tab.classList.add('border-brand', 'text-white');
+    tab.classList.remove('border-transparent', 'text-gray-500');
+  }
+}
+</script>
+{% endblock %}

@@ -27,6 +27,12 @@ def text_to_speech(text: str) -> bytes:
         voice_id=ELEVENLABS_VOICE_ID,
         model_id=ELEVENLABS_MODEL,
         output_format="mp3_44100_128",
+        voice_settings={
+            "stability": 0.5,          # natural variation, not robotic
+            "similarity_boost": 0.75,  # stays true to the voice character
+            "style": 0.35,             # expressive enough for storytelling
+            "use_speaker_boost": True, # enhanced clarity for US audience
+        },
     )
 
     return b"".join(chunk for chunk in audio)
